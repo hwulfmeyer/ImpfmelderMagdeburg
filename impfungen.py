@@ -10,7 +10,6 @@ TG_BOT_TOKEN = ''
 def sendTGMsg(msg):
     tg_bot = Bot(token=TG_BOT_TOKEN)
     tg_bot.send_message(chat_id = "-1001363330234", text=msg)
-    print(msg)
 
 
 website = 'https://impfzentrum.termin-direkt.de/rest-v2/api/'
@@ -19,8 +18,6 @@ msg = ""
 msg += "https://impfzentrum.termin-direkt.de"
 postMsg = False
 for calender in detailsRequest.json()['Data']:
-    if calender['Id'] == 13:
-        continue
     msg += "\n"
     msg += calender['Name']
     firstFreeSlotRequest = requests.get(website + 'Calendars/' + str(calender['Id']) + '/FirstFreeSlot')
@@ -36,14 +33,16 @@ for calender in detailsRequest.json()['Data']:
         scheduleRequestJson = scheduleRequest.json()
         for days in scheduleRequestJson['Data']['Schedules']:
             for termin in scheduleRequestJson['Data']['Schedules'][days]:
-                totalTermine += termin['ConcurrentNum']
-                if termin['FreeSeatsCount'] != 0:
-                    freeTermineNow += termin['FreeSeatsCount']
+                terminDatetime = datetime.fromisoformat(termin['Start'].replace("Z", "+00:00"))
+                if terminDatetime > startDate:
+                    totalTermine += termin['ConcurrentNum']
+                    if termin['FreeSeatsCount'] != 0:
+                        freeTermineNow += termin['FreeSeatsCount']
     msg += "\n"
     if freeTermineNow != 0:
-        msg += "\tFreie Termine: " + str(freeTermineNow)
+        msg += "        Freie Termine: " + str(freeTermineNow)
     else:
-        msg += "\tKEINE freien Termine!"
+        msg += "        KEINE freien Termine!"
 
     freeTermineLast = 0
     picklefile = "calender"+str(calender['Id']) + ".pickle"
@@ -53,7 +52,7 @@ for calender in detailsRequest.json()['Data']:
     except:
         freeTermineLast = 0
     if freeTermineLast!=freeTermineNow:
-        if abs(freeTermineNow-freeTermineLast) > totalTermine*0.2 or (freeTermineLast==0 or freeTermineNow==0):
+        if abs(freeTermineNow-freeTermineLast) > totalTermine*0.125 or (freeTermineLast==0 or freeTermineNow==0):
             postMsg = True
             filewriter = open(picklefile, 'wb')
             pickle.dump(freeTermineNow, filewriter)
@@ -61,6 +60,7 @@ for calender in detailsRequest.json()['Data']:
 if postMsg:
     sendTGMsg(msg)
 
+print(msg)
 
 """
 calenderId = 1
