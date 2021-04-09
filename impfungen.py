@@ -6,6 +6,7 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 import pickle
 
 TG_BOT_TOKEN = ''
+ignoreFirstFreSlotRequest = False
 
 def sendTGMsg(msg):
     tg_bot = Bot(token=TG_BOT_TOKEN)
@@ -22,11 +23,11 @@ for calender in detailsRequest.json()['Data']:
     msg += calender['Name']
     firstFreeSlotRequest = requests.get(website + 'Calendars/' + str(calender['Id']) + '/FirstFreeSlot')
     firstFreeSlotRequestJson = firstFreeSlotRequest.json()
-    
+
     freeTermineNow = 0
     totalTermine = 0
-    if firstFreeSlotRequestJson['Success'] and firstFreeSlotRequestJson['Error'] is None and firstFreeSlotRequestJson['Data'] is not None:
-        startDate = datetime.utcnow().replace(tzinfo=timezone.utc)
+    if ignoreFirstFreSlotRequest or (firstFreeSlotRequestJson['Success'] and firstFreeSlotRequestJson['Error'] is None and firstFreeSlotRequestJson['Data'] is not None):
+        startDate = datetime.utcnow().replace(tzinfo=timezone.utc)+timedelta(hours=1)
         endDate = startDate+timedelta(days=28)
         payload = {"StartDate":startDate,"EndDate":endDate}
         scheduleRequest = requests.get(website + str(calender['Id']) + '/Schedules', data=payload)
@@ -38,6 +39,7 @@ for calender in detailsRequest.json()['Data']:
                     totalTermine += termin['ConcurrentNum']
                     if termin['FreeSeatsCount'] != 0:
                         freeTermineNow += termin['FreeSeatsCount']
+    
     msg += "\n"
     if freeTermineNow != 0:
         msg += "        Freie Termine: " + str(freeTermineNow)
