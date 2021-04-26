@@ -11,8 +11,10 @@ ignoreFirstFreSlotRequest = False
 def sendTGMsg(msg):
     tg_bot = Bot(token=TG_BOT_TOKEN)
     tg_bot.send_message(chat_id = "-1001363330234", text=msg)
+    print("SEND TG MESSAGE")
 
 
+terminedict = {}
 website = 'https://impfzentrum.termin-direkt.de/rest-v2/api/'
 detailsRequest = requests.get(website + "Calendars/WithDetails")
 msg = ""
@@ -46,23 +48,30 @@ for calender in detailsRequest.json()['Data']:
     else:
         msg += "        KEINE freien Termine!"
 
-    freeTermineLast = 0
-    picklefile = "calender"+str(calender['Id']) + ".pickle"
-    try:
-        filereader = open(picklefile, 'rb')
-        freeTermineLast = pickle.load(filereader)
-    except:
-        freeTermineLast = 0
+    terminedict[str(calender['Id'])] = freeTermineNow
+
+
+picklefile = "terminecalender.pkl"
+try:
+    filereader = open(picklefile, 'rb')
+    savedterminedict = pickle.load(filereader)
+except:
+    savedterminedict = {}
+
+for calenderid, freeTermineNow in terminedict.items():
+    freeTermineLast = savedterminedict.get(calenderid)
     if freeTermineLast!=freeTermineNow:
-        if abs(freeTermineNow-freeTermineLast) > totalTermine*0.125 or (freeTermineLast==0 or freeTermineNow==0):
+        if freeTermineLast is None or abs(freeTermineNow-freeTermineLast) > totalTermine*0.125 or (freeTermineLast==0 or freeTermineNow==0):
             postMsg = True
-            filewriter = open(picklefile, 'wb')
-            pickle.dump(freeTermineNow, filewriter)
 
 if postMsg:
+    filewriter = open(picklefile, 'wb')
+    pickle.dump(terminedict, filewriter)
     sendTGMsg(msg)
 
 print(msg)
+
+
 
 """
 calenderId = 1
